@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Download, Upload, Plus, Trash2, ChevronDown, ChevronUp, Check, X, Undo2 } from 'lucide-react';
 
 // ===== TYPES =====
-type TrainingType = 'push' | 'pull' | 'legs_core' | 'murph' | 'run';
+type TrainingType = 'push' | 'pull' | 'legs_core' | 'murph' | 'run' | 'dashboard';
 
 type SetEntry = {
   id: string;
@@ -177,7 +177,7 @@ const VARIATIONS: Record<string, string[]> = {
 // ===== MAIN APP =====
 export default function TrainingTracker() {
   const [db, setDB] = useState<DB>(loadDB);
-  const [activeTab, setActiveTab] = useState<TrainingType | 'dashboard'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | TrainingType>('dashboard');
   const [activeSession, setActiveSession] = useState<TrainingSession | null>(null);
   const [showHistory, setShowHistory] = useState(true);
   const [snackbar, setSnackbar] = useState<string | null>(null);
