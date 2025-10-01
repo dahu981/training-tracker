@@ -1670,7 +1670,6 @@ function SetRow({
   const inputClass = theme === 'dark' ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900';
   const lastSet = findLastSet(exercise.name, exercise.variation, setIndex);
 
-  // Initialisiere lokale States beim Mount oder wenn sich set ändert
   useEffect(() => {
     setWeightInput(set.weightKg !== null ? String(set.weightKg).replace('.', ',') : '');
     setRepsInput(set.reps !== null ? String(set.reps) : '');
@@ -1726,19 +1725,19 @@ function SetRow({
   };
 
   return (
-    <div className={`flex flex-col gap-2 p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'}`}>
-      {/* Erste Zeile: Satz-Nummer + Gewicht + Reps */}
-      <div className="flex items-center gap-2">
-        <span className="w-8 text-center font-bold text-gray-500 shrink-0">{setIndex + 1}</span>
+    <div className={`flex flex-col gap-2 p-2 sm:p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'}`}>
+      {/* Erste Zeile: Satz-Nummer + Gewicht + Reps + Löschen */}
+      <div className="flex items-center gap-1 sm:gap-2">
+        <span className="w-6 sm:w-8 text-center font-bold text-gray-500 shrink-0 text-sm sm:text-base">{setIndex + 1}</span>
         
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           <button 
             onClick={() => adjustWeight(-2.5)}
             onDoubleClick={(e) => {
               e.preventDefault();
               adjustWeight(-2.5, 2);
             }}
-            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded text-xl font-bold active:bg-gray-500 touch-manipulation shrink-0"
+            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded text-lg sm:text-xl font-bold active:bg-gray-500 touch-manipulation shrink-0"
           >−</button>
           <input
             type="text"
@@ -1746,7 +1745,7 @@ function SetRow({
             value={weightInput}
             onChange={(e) => updateSetWeight(e.target.value)}
             placeholder="kg"
-            className={`w-16 sm:w-20 h-9 sm:h-10 px-2 py-2 text-center text-base sm:text-lg rounded border ${inputClass} touch-manipulation`}
+            className={`w-14 sm:w-20 h-8 sm:h-10 px-1 sm:px-2 py-1 sm:py-2 text-center text-sm sm:text-lg rounded border ${inputClass} touch-manipulation`}
           />
           <button 
             onClick={() => adjustWeight(2.5)}
@@ -1754,16 +1753,16 @@ function SetRow({
               e.preventDefault();
               adjustWeight(2.5, 2);
             }}
-            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded text-xl font-bold active:bg-gray-500 touch-manipulation shrink-0"
+            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded text-lg sm:text-xl font-bold active:bg-gray-500 touch-manipulation shrink-0"
           >+</button>
         </div>
 
-        <span className="text-gray-500 text-lg shrink-0">×</span>
+        <span className="text-gray-500 text-base sm:text-lg shrink-0">×</span>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           <button 
             onClick={() => adjustReps(-1)} 
-            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded text-xl font-bold active:bg-gray-500 touch-manipulation shrink-0"
+            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded text-lg sm:text-xl font-bold active:bg-gray-500 touch-manipulation shrink-0"
           >−</button>
           <input
             type="text"
@@ -1771,31 +1770,32 @@ function SetRow({
             value={repsInput}
             onChange={(e) => updateSetReps(e.target.value)}
             placeholder="Wdh"
-            className={`w-16 sm:w-20 h-9 sm:h-10 px-2 py-2 text-center text-base sm:text-lg rounded border ${inputClass} touch-manipulation`}
+            className={`w-14 sm:w-20 h-8 sm:h-10 px-1 sm:px-2 py-1 sm:py-2 text-center text-sm sm:text-lg rounded border ${inputClass} touch-manipulation`}
           />
           <button 
             onClick={() => adjustReps(1)} 
-            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded text-xl font-bold active:bg-gray-500 touch-manipulation shrink-0"
+            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded text-lg sm:text-xl font-bold active:bg-gray-500 touch-manipulation shrink-0"
           >+</button>
         </div>
 
         <button
           onClick={() => deleteSet(setIndex)}
-          className="p-2 hover:bg-red-600 active:bg-red-700 rounded transition-colors touch-manipulation shrink-0 ml-auto"
+          className="p-1.5 sm:p-2 hover:bg-red-600 active:bg-red-700 rounded transition-colors touch-manipulation shrink-0 ml-auto"
         >
-          <Trash2 size={18} />
+          <Trash2 size={16} className="sm:hidden" />
+          <Trash2 size={18} className="hidden sm:block" />
         </button>
       </div>
 
       {/* Zweite Zeile: Letzter Satz Info + Übernehmen Button */}
       {lastSet && (
-        <div className="flex items-center justify-between gap-2 pl-10">
+        <div className="flex items-center justify-between gap-2 pl-7 sm:pl-10">
           <span className="text-xs sm:text-sm text-gray-400">
             Letztes: {formatWeight(lastSet.weightKg)} × {lastSet.reps || '—'}
           </span>
           <button
             onClick={applyLast}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded text-sm font-medium transition-colors touch-manipulation whitespace-nowrap"
+            className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded text-xs sm:text-sm font-medium transition-colors touch-manipulation whitespace-nowrap"
           >
             Übernehmen
           </button>
