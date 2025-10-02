@@ -184,10 +184,25 @@ export default function TrainingTracker() {
   const [undoAction, setUndoAction] = useState<(() => void) | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showHeader, setShowHeader] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
     saveDB(db);
   }, [db]);
+
+useEffect(() => {
+  const handleScroll = () => {
+    if (window.scrollY > 10) {
+      setShowHeader(false);
+    } else {
+      setShowHeader(true);
+    }
+  };
+
+  window.addEventListener('scroll', handleScroll, { passive: true });
+  return () => window.removeEventListener('scroll', handleScroll);
+}, []);
 
   const showSnackbar = (message: string, undo?: () => void) => {
     setSnackbar(message);
@@ -386,143 +401,160 @@ export default function TrainingTracker() {
   return (
     <div className={`min-h-screen ${bgClass} transition-colors`}>
       {/* Header */}
-      <header className={`sticky top-0 z-50 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} shadow-sm`}>
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold">Training Tracker</h1>
-              {activeSession && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Volumen: {currentVolume.toFixed(0)} kg · {currentSetCount} Sätze
-                </p>
-              )}
-            </div>
-            <button
-              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
-              className="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm"
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
-          </div>
-          
-          {/* Mobile: Custom Dropdown, Desktop: Tabs */}
-          <div className="mb-4">
-            {/* Mobile Dropdown */}
-            <div className="block md:hidden relative">
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className={`w-full px-4 py-3 rounded-lg font-medium text-base border-2 flex items-center justify-between ${
-                  theme === 'dark' 
-                    ? 'bg-gray-800 border-gray-700 text-white' 
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-              >
-                <span>
-                  {activeTab === 'dashboard' ? '📊 Übersicht' 
-                   : activeTab === 'push' ? 'Push'
-                   : activeTab === 'pull' ? 'Pull'
-                   : activeTab === 'legs_core' ? 'Beine/Bauch'
-                   : activeTab === 'murph' ? 'Murph'
-                   : 'Laufen'}
-                </span>
-                <ChevronDown size={20} className={`transition-transform ${mobileMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {mobileMenuOpen && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setMobileMenuOpen(false)}
-                  />
-                  <div className={`absolute top-full left-0 right-0 mt-2 rounded-lg shadow-xl z-50 overflow-hidden ${
-                    theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-300'
-                  }`}>
-                    {[
-                      { value: 'dashboard', label: '📊 Übersicht' },
-                      { value: 'push', label: 'Push' },
-                      { value: 'pull', label: 'Pull' },
-                      { value: 'legs_core', label: 'Beine/Bauch' },
-                      { value: 'murph', label: 'Murph' },
-                      { value: 'run', label: 'Laufen' }
-                    ].map(item => (
-                      <button
-                        key={item.value}
-                        onClick={() => {
-                          setActiveTab(item.value as TrainingType | 'dashboard');
-                          setMobileMenuOpen(false);
-                        }}
-                        className={`w-full px-4 py-3 text-left font-medium transition-colors ${
-                          activeTab === item.value
-                            ? 'bg-blue-600 text-white'
-                            : theme === 'dark'
-                            ? 'hover:bg-gray-700 text-gray-100'
-                            : 'hover:bg-gray-100 text-gray-900'
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Desktop Tabs */}
-            <div className="hidden md:flex gap-2 overflow-x-auto">
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
-                  activeTab === 'dashboard'
-                    ? 'bg-blue-600 text-white'
-                    : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
-                }`}
-              >
-                📊 Übersicht
-              </button>
-              {(['push', 'pull', 'legs_core', 'murph', 'run'] as TrainingType[]).map(type => (
-                <button
-                  key={type}
-                  onClick={() => setActiveTab(type)}
-                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
-                    activeTab === type
-                      ? 'bg-blue-600 text-white'
-                      : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
-                  }`}
-                >
-                  {type === 'push' ? 'Push' : type === 'pull' ? 'Pull' : type === 'legs_core' ? 'Beine/Bauch' : type === 'murph' ? 'Murph' : 'Laufen'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-2 flex-wrap">
-            {activeTab !== 'dashboard' && (
-              <button
-                onClick={createNewSession}
-                disabled={activeTab !== 'push' && activeTab !== 'pull' && activeTab !== 'legs_core' && activeTab !== 'murph' && activeTab !== 'run'}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
-              >
-                <Plus size={20} /> Neues Training
-              </button>
-            )}
-            <button
-              onClick={exportBackup}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-            >
-              <Download size={20} /> Backup
-            </button>
-            <label className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg cursor-pointer transition-colors">
-              <Upload size={20} /> Laden
-              <input type="file" accept=".json" onChange={importBackup} className="hidden" />
-            </label>
+<header className={`sticky top-0 z-50 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} shadow-sm`}>
+  <div className="max-w-4xl mx-auto px-4 py-4">
+    {/* Dieser Teil bleibt IMMER sichtbar */}
+    <div className="flex items-center justify-between mb-4 relative pb-4">
+      <div>
+  <h1 
+          className="text-2xl font-bold cursor-pointer transition-colors"
+          onClick={() => setActiveTab('dashboard')}
+        >
+          Training Tracker
+        </h1>
+  {activeSession && (
+          <p className="text-sm text-gray-500 mt-1">
+            Volumen: {currentVolume.toFixed(0)} kg · {currentSetCount} Sätze
+          </p>
+        )}
+      </div>
+      <button
+        onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+        className="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm"
+      >
+        {theme === 'dark' ? '☀️' : '🌙'}
+      </button>
+      
+      {activeSession && (activeSession.type === 'push' || activeSession.type === 'pull' || activeSession.type === 'legs_core') && (
+        <div className="absolute left-0 right-0 bottom-2">
+          <div className="bg-gray-700 rounded-full h-2 overflow-hidden">
+            <div 
+              className="bg-green-500 h-full transition-all duration-300"
+              style={{ 
+                width: `${Math.min(100, (activeSession.exercises.reduce((sum, ex) => sum + ex.sets.filter(s => s.weightKg !== null && s.reps !== null).length, 0) / Math.max(1, activeSession.exercises.reduce((sum, ex) => sum + ex.sets.length, 0))) * 100)}%` 
+              }}
+            />
           </div>
         </div>
-      </header>
+      )}
+    </div>
+    
+    {/* Dieser Teil verschwindet beim Scrollen */}
+{showHeader && (
+<div>
+        {/* Mobile: Custom Dropdown, Desktop: Tabs */}
+      <div className="mb-4">
+        {/* Mobile Dropdown */}
+        <div className="block md:hidden relative">
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className={`w-full px-4 py-3 rounded-lg font-medium text-base border-2 flex items-center justify-between ${
+              theme === 'dark' 
+                ? 'bg-gray-800 border-gray-700 text-white' 
+                : 'bg-white border-gray-300 text-gray-900'
+            }`}
+          >
+            <span>
+              {activeTab === 'dashboard' ? '📊 Übersicht' 
+               : activeTab === 'push' ? 'Push'
+               : activeTab === 'pull' ? 'Pull'
+               : activeTab === 'legs_core' ? 'Beine/Bauch'
+               : activeTab === 'murph' ? 'Murph'
+               : 'Laufen'}
+            </span>
+            <ChevronDown size={20} className={`transition-transform ${mobileMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {mobileMenuOpen && (
+            <>
+              <div 
+                className="fixed inset-0 z-40" 
+                onClick={() => setMobileMenuOpen(false)}
+              />
+              <div className={`absolute top-full left-0 right-0 mt-2 rounded-lg shadow-xl z-50 overflow-hidden ${
+                theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-300'
+              }`}>
+                {[
+                  { value: 'dashboard', label: '📊 Übersicht' },
+                  { value: 'push', label: 'Push' },
+                  { value: 'pull', label: 'Pull' },
+                  { value: 'legs_core', label: 'Beine/Bauch' },
+                  { value: 'murph', label: 'Murph' },
+                  { value: 'run', label: 'Laufen' }
+                ].map(item => (
+                  <button
+                    key={item.value}
+                    onClick={() => {
+                      setActiveTab(item.value as TrainingType | 'dashboard');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full px-4 py-3 text-left font-medium transition-colors ${
+                      activeTab === item.value
+                        ? 'bg-blue-600 text-white'
+                        : theme === 'dark'
+                        ? 'hover:bg-gray-700 text-gray-100'
+                        : 'hover:bg-gray-100 text-gray-900'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Desktop Tabs */}
+        <div className="hidden md:flex gap-2 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
+              activeTab === 'dashboard'
+                ? 'bg-blue-600 text-white'
+                : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+          >
+            📊 Übersicht
+          </button>
+          {(['push', 'pull', 'legs_core', 'murph', 'run'] as TrainingType[]).map(type => (
+            <button
+              key={type}
+              onClick={() => setActiveTab(type)}
+              className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
+                activeTab === type
+                  ? 'bg-blue-600 text-white'
+                  : theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+              }`}
+            >
+              {type === 'push' ? 'Push' : type === 'pull' ? 'Pull' : type === 'legs_core' ? 'Beine/Bauch' : type === 'murph' ? 'Murph' : 'Laufen'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+{activeTab !== 'dashboard' && !activeSession && (
+        <button
+          onClick={createNewSession}
+          disabled={activeTab !== 'push' && activeTab !== 'pull' && activeTab !== 'legs_core' && activeTab !== 'murph' && activeTab !== 'run'}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+        >
+          <Plus size={20} /> Neues Training
+        </button>
+      )}
+      </div>
+    )}
+  </div>
+</header>
 
       <main className="max-w-4xl mx-auto px-4 py-6">
-        {activeTab === 'dashboard' && (
-          <DashboardView db={db} theme={theme} />
-        )}
+     {activeTab === 'dashboard' && (
+  <DashboardView 
+    db={db} 
+    theme={theme} 
+    onExport={exportBackup}
+    onImport={importBackup}
+  />
+)}
 
         {activeTab !== 'dashboard' && activeTab !== 'push' && activeTab !== 'pull' && activeTab !== 'legs_core' && activeTab !== 'murph' && activeTab !== 'run' && (
           <div className={`${cardClass} border rounded-lg p-8 text-center`}>
@@ -565,7 +597,30 @@ export default function TrainingTracker() {
           />
         )}
 
-        {(activeTab === 'push' || activeTab === 'pull' || activeTab === 'legs_core') && activeSession && (
+  {(activeTab === 'push' || activeTab === 'pull' || activeTab === 'legs_core') && activeSession && showHistory && activeSession.type === activeTab && (
+          <div 
+            onClick={() => setShowHistory(false)}
+            className={`${cardClass} border-2 border-green-500 rounded-lg p-6 mb-4 cursor-pointer hover:bg-opacity-80 transition-all`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🟢</span>
+                  <h3 className="text-xl font-bold text-green-500">Training läuft...</h3>
+                </div>
+                <p className="text-sm text-gray-400">
+                  Gestartet: {formatDate(activeSession.startedAt)}
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Volumen: {calcVolume(activeSession).toFixed(0)} kg · {activeSession.exercises.reduce((sum, ex) => sum + ex.sets.filter(s => s.weightKg !== null && s.reps !== null).length, 0)} / {activeSession.exercises.reduce((sum, ex) => sum + ex.sets.length, 0)} Sätze
+                </p>
+              </div>
+              <div className="text-3xl">▶️</div>
+            </div>
+          </div>
+        )}
+
+        {(activeTab === 'push' || activeTab === 'pull' || activeTab === 'legs_core') && activeSession && !showHistory && activeSession.type === activeTab && (
           <ActiveSessionView
             session={activeSession}
             updateSession={updateSession}
@@ -580,8 +635,8 @@ export default function TrainingTracker() {
           />
         )}
 
-        {(activeTab === 'push' || activeTab === 'pull' || activeTab === 'legs_core' || activeTab === 'murph' || activeTab === 'run') && !activeSession && showHistory && (
-          <HistoryView sessions={filteredSessions} theme={theme} onDelete={deleteSession} />
+        {(activeTab === 'push' || activeTab === 'pull' || activeTab === 'legs_core') && (
+          <HistoryView sessions={filteredSessions} theme={theme} onDelete={deleteSession} db={db} setDB={setDB} showSnackbar={showSnackbar} />
         )}
       </main>
 
@@ -608,7 +663,12 @@ export default function TrainingTracker() {
 }
 
 // ===== DASHBOARD VIEW =====
-function DashboardView({ db, theme }: { db: DB; theme: 'light' | 'dark' }) {
+function DashboardView({ db, theme, onExport, onImport }: { 
+  db: DB; 
+  theme: 'light' | 'dark';
+  onExport: () => void;
+  onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
   const cardClass = theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   
   const completedSessions = db.sessions.filter(s => s.completed);
@@ -675,145 +735,170 @@ function DashboardView({ db, theme }: { db: DB; theme: 'light' | 'dark' }) {
       });
   });
   
-  return (
-    <div className="space-y-4">
-      {/* Trainingsfrequenz */}
-      <div className={`${cardClass} border rounded-lg p-6`}>
-        <h3 className="text-xl font-bold mb-4">Trainingsfrequenz</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center">
-            <p className="text-3xl font-bold text-blue-500">{last7Days.length}</p>
-            <p className="text-sm text-gray-400">Letzte 7 Tage</p>
-          </div>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-blue-500">{last30Days.length}</p>
-            <p className="text-sm text-gray-400">Letzte 30 Tage</p>
-          </div>
+return (
+  <div className="space-y-4">
+    {/* Trainingsfrequenz */}
+    <div className={`${cardClass} border rounded-lg p-6`}>
+      <h3 className="text-xl font-bold mb-4">Trainingsfrequenz</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="text-center">
+          <p className="text-3xl font-bold text-blue-500">{last7Days.length}</p>
+          <p className="text-sm text-gray-400">Letzte 7 Tage</p>
+        </div>
+        <div className="text-center">
+          <p className="text-3xl font-bold text-blue-500">{last30Days.length}</p>
+          <p className="text-sm text-gray-400">Letzte 30 Tage</p>
         </div>
       </div>
-      
-      {/* Kalender Heatmap */}
+    </div>
+    
+    {/* Kalender Heatmap */}
+    <div className={`${cardClass} border rounded-lg p-6`}>
+      <h3 className="text-xl font-bold mb-4">Aktivität (letzte 90 Tage)</h3>
+      <div className="grid grid-cols-10 gap-1.5 sm:gap-2">
+        {Array.from({ length: 90 }, (_, i) => {
+          const date = new Date(now.getTime() - (89 - i) * 24 * 60 * 60 * 1000);
+          const dateKey = date.toISOString().split('T')[0];
+          const count = heatmapData[dateKey] || 0;
+          const intensity = count === 0 ? 'bg-gray-700' 
+                         : count === 1 ? 'bg-green-900' 
+                         : count === 2 ? 'bg-green-700' 
+                         : 'bg-green-500';
+          return (
+            <div
+              key={dateKey}
+              className={`aspect-square rounded ${intensity} min-w-[8px] min-h-[8px] touch-manipulation`}
+              title={`${dateKey}: ${count} Training${count !== 1 ? 's' : ''}`}
+            />
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-2 mt-3 text-xs text-gray-400 justify-center sm:justify-start">
+        <span>Weniger</span>
+        <div className="w-4 h-4 bg-gray-700 rounded"></div>
+        <div className="w-4 h-4 bg-green-900 rounded"></div>
+        <div className="w-4 h-4 bg-green-700 rounded"></div>
+        <div className="w-4 h-4 bg-green-500 rounded"></div>
+        <span>Mehr</span>
+      </div>
+    </div>
+    
+    {/* Trainingsvolumen */}
+    <div className={`${cardClass} border rounded-lg p-6`}>
+      <h3 className="text-xl font-bold mb-4">Trainingsvolumen</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="text-center">
+          <p className="text-3xl font-bold text-green-500">
+            {(volumeLast7Days / 1000).toFixed(1)}t
+          </p>
+          <p className="text-sm text-gray-400">Diese Woche</p>
+        </div>
+        <div className="text-center">
+          <p className="text-3xl font-bold text-green-500">
+            {(volumeLast30Days / 1000).toFixed(1)}t
+          </p>
+          <p className="text-sm text-gray-400">Letzter Monat</p>
+        </div>
+      </div>
+    </div>
+    
+    {/* Hauptübungen Progress */}
+    {mainExercises.some(ex => exerciseData[ex].length > 0) && (
       <div className={`${cardClass} border rounded-lg p-6`}>
-        <h3 className="text-xl font-bold mb-4">Aktivität (letzte 90 Tage)</h3>
-        <div className="grid grid-cols-10 gap-1.5 sm:gap-2">
-          {Array.from({ length: 90 }, (_, i) => {
-            const date = new Date(now.getTime() - (89 - i) * 24 * 60 * 60 * 1000);
-            const dateKey = date.toISOString().split('T')[0];
-            const count = heatmapData[dateKey] || 0;
-            const intensity = count === 0 ? 'bg-gray-700' 
-                           : count === 1 ? 'bg-green-900' 
-                           : count === 2 ? 'bg-green-700' 
-                           : 'bg-green-500';
+        <h3 className="text-xl font-bold mb-4">Hauptübungen (Max-Gewicht)</h3>
+        <div className="space-y-6">
+          {mainExercises.map(exerciseName => {
+            const data = exerciseData[exerciseName];
+            if (data.length === 0) return null;
+            
+            const maxWeight = Math.max(...data.map(d => d.weight));
+            const latestWeight = data[data.length - 1]?.weight || 0;
+            
             return (
-              <div
-                key={dateKey}
-                className={`aspect-square rounded ${intensity} min-w-[8px] min-h-[8px] touch-manipulation`}
-                title={`${dateKey}: ${count} Training${count !== 1 ? 's' : ''}`}
-              />
+              <div key={exerciseName}>
+                <div className="flex justify-between mb-2">
+                  <span className="font-semibold">{exerciseName}</span>
+                  <span className="text-blue-500 font-bold">{latestWeight} kg</span>
+                </div>
+                <div className="h-16 flex items-end gap-1">
+                  {data.slice(-10).map((point, i) => {
+                    const height = (point.weight / maxWeight) * 100;
+                    return (
+                      <div
+                        key={i}
+                        className="flex-1 bg-blue-600 rounded-t transition-all hover:bg-blue-500"
+                        style={{ height: `${height}%` }}
+                        title={`${point.date}: ${point.weight} kg`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>
-        <div className="flex items-center gap-2 mt-3 text-xs text-gray-400 justify-center sm:justify-start">
-          <span>Weniger</span>
-          <div className="w-4 h-4 bg-gray-700 rounded"></div>
-          <div className="w-4 h-4 bg-green-900 rounded"></div>
-          <div className="w-4 h-4 bg-green-700 rounded"></div>
-          <div className="w-4 h-4 bg-green-500 rounded"></div>
-          <span>Mehr</span>
-        </div>
       </div>
-      
-      {/* Trainingsvolumen */}
+    )}
+    
+    {/* Trainingssplit */}
+    {total > 0 && (
       <div className={`${cardClass} border rounded-lg p-6`}>
-        <h3 className="text-xl font-bold mb-4">Trainingsvolumen</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center">
-            <p className="text-3xl font-bold text-green-500">
-              {(volumeLast7Days / 1000).toFixed(1)}t
-            </p>
-            <p className="text-sm text-gray-400">Diese Woche</p>
-          </div>
-          <div className="text-center">
-            <p className="text-3xl font-bold text-green-500">
-              {(volumeLast30Days / 1000).toFixed(1)}t
-            </p>
-            <p className="text-sm text-gray-400">Letzter Monat</p>
-          </div>
+        <h3 className="text-xl font-bold mb-4">Trainingssplit (30 Tage)</h3>
+        <div className="space-y-3">
+          {Object.entries(splitCounts).map(([type, count]) => {
+            const percentage = ((count / total) * 100).toFixed(0);
+            return (
+              <div key={type}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>{type}</span>
+                  <span>{count}× ({percentage}%)</span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-3">
+                  <div
+                    className="bg-blue-600 h-3 rounded-full transition-all"
+                    style={{ width: `${percentage}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
-      
-      {/* Hauptübungen Progress */}
-      {mainExercises.some(ex => exerciseData[ex].length > 0) && (
-        <div className={`${cardClass} border rounded-lg p-6`}>
-          <h3 className="text-xl font-bold mb-4">Hauptübungen (Max-Gewicht)</h3>
-          <div className="space-y-6">
-            {mainExercises.map(exerciseName => {
-              const data = exerciseData[exerciseName];
-              if (data.length === 0) return null;
-              
-              const maxWeight = Math.max(...data.map(d => d.weight));
-              const latestWeight = data[data.length - 1]?.weight || 0;
-              
-              return (
-                <div key={exerciseName}>
-                  <div className="flex justify-between mb-2">
-                    <span className="font-semibold">{exerciseName}</span>
-                    <span className="text-blue-500 font-bold">{latestWeight} kg</span>
-                  </div>
-                  <div className="h-16 flex items-end gap-1">
-                    {data.slice(-10).map((point, i) => {
-                      const height = (point.weight / maxWeight) * 100;
-                      return (
-                        <div
-                          key={i}
-                          className="flex-1 bg-blue-600 rounded-t transition-all hover:bg-blue-500"
-                          style={{ height: `${height}%` }}
-                          title={`${point.date}: ${point.weight} kg`}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      
-      {/* Trainingssplit */}
-      {total > 0 && (
-        <div className={`${cardClass} border rounded-lg p-6`}>
-          <h3 className="text-xl font-bold mb-4">Trainingssplit (30 Tage)</h3>
-          <div className="space-y-3">
-            {Object.entries(splitCounts).map(([type, count]) => {
-              const percentage = ((count / total) * 100).toFixed(0);
-              return (
-                <div key={type}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>{type}</span>
-                    <span>{count}× ({percentage}%)</span>
-                  </div>
-                  <div className="w-full bg-gray-700 rounded-full h-3">
-                    <div
-                      className="bg-blue-600 h-3 rounded-full transition-all"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      
-      {completedSessions.length === 0 && (
-        <div className={`${cardClass} border rounded-lg p-8 text-center`}>
-          <p className="text-xl mb-2">Noch keine Trainings</p>
-          <p className="text-gray-500">Starte dein erstes Training, um Statistiken zu sehen!</p>
-        </div>
-      )}
+    )}
+    
+    {/* Datenverwaltung */}
+    <div className={`${cardClass} border rounded-lg p-6`}>
+      <h3 className="text-xl font-bold mb-4">Datenverwaltung</h3>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <button
+          onClick={onExport}
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+        >
+          <Download size={20} /> Backup erstellen
+        </button>
+        <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg cursor-pointer font-medium transition-colors">
+          <Upload size={20} /> Backup laden
+          <input 
+            type="file" 
+            accept=".json" 
+            onChange={onImport}
+            className="hidden" 
+          />
+        </label>
+      </div>
+      <p className="text-xs text-gray-400 mt-3 text-center">
+        Sichere deine Trainingsdaten regelmäßig oder übertrage sie auf ein anderes Gerät
+      </p>
     </div>
-  );
+    
+    {completedSessions.length === 0 && (
+      <div className={`${cardClass} border rounded-lg p-8 text-center`}>
+        <p className="text-xl mb-2">Noch keine Trainings</p>
+        <p className="text-gray-500">Starte dein erstes Training, um Statistiken zu sehen!</p>
+      </div>
+    )}
+  </div>
+);
 }
 
 // ===== RUN VIEW =====
@@ -1302,7 +1387,7 @@ function MurphView({
           onClick={handleSave}
           className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition-colors"
         >
-          ✓ Training beenden & speichern
+          ✓ Training beenden
         </button>
         <button
           onClick={onCancel}
@@ -1455,7 +1540,7 @@ function ActiveSessionView({
           onClick={onSave}
           className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition-colors"
         >
-          ✓ Training beenden & speichern
+          ✓ Training beenden
         </button>
         <button
           onClick={onCancel}
@@ -1526,7 +1611,7 @@ function ExerciseCard({
 
   return (
     <div className={`${cardClass} border rounded-lg p-4`}>
-      <div className="flex items-center justify-between mb-3">
+<div className="flex items-center justify-between mb-3">
         <div className="flex-1">
           <h3 className="text-lg font-bold">{exercise.name}</h3>
           {VARIATIONS[exercise.name] && (
@@ -1541,12 +1626,29 @@ function ExerciseCard({
             </select>
           )}
         </div>
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="p-2 hover:bg-gray-700 rounded transition-colors"
-        >
-          {expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              if (confirm(`Übung "${exercise.name}" wirklich komplett löschen?`)) {
+                updateSession(session => ({
+                  ...session,
+                  exercises: session.exercises.filter((_, i) => i !== exIndex)
+                }));
+                showSnackbar('Übung gelöscht');
+              }
+            }}
+            className="p-2 hover:bg-red-900 hover:bg-opacity-30 rounded transition-colors"
+            title="Übung löschen"
+          >
+            <Trash2 size={18} className="text-red-500" />
+          </button>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="p-2 hover:bg-gray-700 rounded transition-colors"
+          >
+            {expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+        </div>
       </div>
 
       {expanded && (
@@ -1725,7 +1827,11 @@ function SetRow({
   };
 
   return (
-    <div className={`flex flex-col gap-2 p-2 sm:p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'}`}>
+   <div className={`flex flex-col gap-2 p-2 sm:p-3 rounded-lg ${
+      set.weightKg !== null && set.reps !== null
+        ? theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'  // Vollständig: dunkel
+        : theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'  // Unvollständig: hell
+    }`}>
       {/* Erste Zeile: Satz-Nummer + Gewicht + Reps + Löschen */}
       <div className="flex items-center gap-0.5 sm:gap-2">
         <span className="w-5 sm:w-8 text-center font-bold text-gray-500 shrink-0 text-xs sm:text-base">{setIndex + 1}</span>
@@ -1788,17 +1894,23 @@ function SetRow({
       </div>
 
       {/* Zweite Zeile: Letzter Satz Info + Übernehmen Button */}
-      {lastSet && (
+ {lastSet && (
         <div className="flex items-center justify-between gap-2 pl-6 sm:pl-10">
           <span className="text-xs sm:text-sm text-gray-400 truncate">
             Letztes: {formatWeight(lastSet.weightKg)} × {lastSet.reps || '—'}
           </span>
-          <button
-            onClick={applyLast}
-            className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded text-xs sm:text-sm font-medium transition-colors touch-manipulation whitespace-nowrap shrink-0"
-          >
-            Übernehmen
-          </button>
+          {set.weightKg === lastSet.weightKg && set.reps === lastSet.reps ? (
+            <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-green-800 rounded text-xs sm:text-sm font-small whitespace-nowrap shrink-0 flex items-center gap-1">
+              <Check size={14} /> übernommen!
+            </div>
+          ) : (
+            <button
+              onClick={applyLast}
+              className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded text-xs sm:text-sm font-medium transition-colors touch-manipulation whitespace-nowrap shrink-0"
+            >
+              Übernehmen
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -1809,26 +1921,71 @@ function SetRow({
 function HistoryView({ 
   sessions, 
   theme,
-  onDelete
+  onDelete,
+  db,
+  setDB,
+  showSnackbar
 }: { 
   sessions: TrainingSession[]; 
   theme: 'light' | 'dark';
   onDelete: (sessionId: string) => void;
+  db: DB;
+  setDB: (updater: (prev: DB) => DB) => void;
+  showSnackbar: (msg: string, undo?: () => void) => void;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // ✨ NEU: Edit-Status
+  const [editingSession, setEditingSession] = useState<TrainingSession | null>(null);
+
   const cardClass = theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   const inputClass = theme === 'dark' ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900';
 
+  // 🔧 Edit-Handler
+  const handleEdit = (session: TrainingSession) => {
+    // tiefer Klon, damit wir im Editor gefahrlos mutieren können
+    const clone = JSON.parse(JSON.stringify(session)) as TrainingSession;
+    setEditingSession(clone);
+    setExpandedId(session.id);
+  };
+
+  const updateEditingSession = (updater: (s: TrainingSession) => TrainingSession) => {
+    setEditingSession(prev => (prev ? updater(prev) : prev));
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSession(null);
+  };
+
+  const handleSaveEdit = (updated: TrainingSession) => {
+    // totals für Kraft-Sessions neu berechnen
+    if (updated.type !== 'murph' && updated.type !== 'run') {
+      updated.totals = {
+        volumeKg: calcVolume(updated),
+        setCount: updated.exercises.reduce((sum, ex) => sum + ex.sets.length, 0)
+      };
+    }
+
+    setDB(prev => ({
+      ...prev,
+      sessions: prev.sessions.map(s => (s.id === updated.id ? updated : s))
+    }));
+
+    setEditingSession(null);
+    showSnackbar('Änderungen gespeichert');
+  };
+
+  // 🔎 Filter für die Übersicht
   const filteredSessions = sessions.filter(session => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
       session.date.toLowerCase().includes(term) ||
-      session.exercises.some(ex => 
+      session.exercises.some(ex =>
         ex.name.toLowerCase().includes(term) ||
-        ex.variation?.toLowerCase().includes(term)
+        (ex.variation || '').toLowerCase().includes(term)
       )
     );
   });
@@ -1838,11 +1995,222 @@ function HistoryView({
     setDeleteConfirm(null);
   };
 
+  // 📝 Bearbeitungsansicht
+  if (editingSession) {
+    return (
+      <div className={`${cardClass} border rounded-lg p-4 space-y-4`}>
+        <h2 className="text-2xl font-bold mb-2">Training bearbeiten</h2>
+
+        {/* Datum / Uhrzeit */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Datum & Zeit</label>
+            <input
+              type="datetime-local"
+              value={new Date(editingSession.date).toISOString().slice(0,16)}
+              onChange={(e) => {
+                const iso = new Date(e.target.value).toISOString();
+                updateEditingSession(s => ({ ...s, date: iso, startedAt: iso }));
+              }}
+              className={`w-full px-3 py-2 rounded border ${inputClass}`}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Ort</label>
+            <input
+              type="text"
+              value={editingSession.location || ''}
+              onChange={(e) => updateEditingSession(s => ({ ...s, location: e.target.value }))}
+              placeholder="z.B. SportsInn"
+              className={`w-full px-3 py-2 rounded border ${inputClass}`}
+            />
+          </div>
+        </div>
+
+        {/* Notizen */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Notizen</label>
+          <textarea
+            value={editingSession.notes || ''}
+            onChange={(e) => updateEditingSession(s => ({ ...s, notes: e.target.value }))}
+            rows={3}
+            className={`w-full px-3 py-2 rounded border ${inputClass}`}
+          />
+        </div>
+
+        {/* Übungen & Sätze */}
+        <div className="space-y-4">
+          {editingSession.exercises.map((ex, exIdx) => (
+            <div key={ex.id} className="border rounded-lg p-3 space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={ex.name}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    updateEditingSession(s => {
+                      const clone = { ...s };
+                      clone.exercises = clone.exercises.map((e2, i) => i === exIdx ? { ...e2, name } : e2);
+                      return clone;
+                    });
+                  }}
+                  className={`flex-1 px-3 py-2 rounded border ${inputClass}`}
+                />
+                <input
+                  type="text"
+                  value={ex.variation || ''}
+                  onChange={(e) => {
+                    const variation = e.target.value || undefined;
+                    updateEditingSession(s => {
+                      const clone = { ...s };
+                      clone.exercises = clone.exercises.map((e2, i) => i === exIdx ? { ...e2, variation } : e2);
+                      return clone;
+                    });
+                  }}
+                  placeholder="Variation (optional)"
+                  className={`w-full sm:w-48 px-3 py-2 rounded border ${inputClass}`}
+                />
+              </div>
+
+              
+              {/* Sätze */}
+<div className="space-y-2">
+  {ex.sets.map((set, setIdx) => (
+    <div key={set.id} className="grid grid-cols-6 sm:grid-cols-12 gap-2 items-center">
+      {/* Gewicht */}
+      <div className="col-span-3 sm:col-span-3">
+        <input
+          type="text"
+          value={set.weightKg !== null ? String(set.weightKg).replace('.', ',') : ''}
+          onChange={(e) => {
+            const parsed = parseNumber(e.target.value);
+            updateEditingSession(s => {
+              const clone = { ...s };
+              clone.exercises[exIdx].sets[setIdx].weightKg = parsed;
+              return clone;
+            });
+          }}
+          placeholder="Gewicht"
+          className={`w-full px-3 py-2 rounded border ${inputClass}`}
+        />
+      </div>
+
+      {/* Wdh. */}
+      <div className="col-span-2 sm:col-span-2">
+        <input
+          type="text"
+          value={set.reps !== null ? String(set.reps) : ''}
+          onChange={(e) => {
+            const val = e.target.value.replace(/\D/g, '');
+            const parsed = val === '' ? null : parseInt(val, 10);
+            updateEditingSession(s => {
+              const clone = { ...s };
+              clone.exercises[exIdx].sets[setIdx].reps = parsed;
+              return clone;
+            });
+          }}
+          placeholder="Wdh."
+          className={`w-full px-3 py-2 rounded border ${inputClass}`}
+        />
+      </div>
+
+      {/* Löschen-Icon rechts */}
+      <div className="col-span-1 sm:col-span-1 flex justify-end">
+        <button
+          onClick={() => {
+            const removed = set;
+            updateEditingSession(s => {
+              const clone = { ...s };
+              clone.exercises[exIdx].sets = clone.exercises[exIdx].sets.filter((_, i) => i !== setIdx);
+              return clone;
+            });
+            showSnackbar('Satz gelöscht', () => {
+              updateEditingSession(s => {
+                if (!s) return s;
+                const clone = { ...s };
+                clone.exercises[exIdx].sets = [
+                  ...clone.exercises[exIdx].sets.slice(0, setIdx),
+                  removed,
+                  ...clone.exercises[exIdx].sets.slice(setIdx),
+                ];
+                return clone;
+              });
+            });
+          }}
+          className="p-1 rounded-full text-gray-400 hover:text-red-500"
+          title="Satz löschen"
+          aria-label="Satz löschen"
+        >
+          🗑️
+        </button>
+      </div>
+    </div>
+  ))}
+</div>
+
+
+              <button
+                onClick={() => {
+                  updateEditingSession(s => {
+                    const clone = { ...s };
+                    clone.exercises[exIdx].sets.push({
+                      id: generateId(),
+                      weightKg: null,
+                      reps: null,
+                      createdAt: new Date().toISOString(),
+                    });
+                    return clone;
+                  });
+                }}
+                className="w-full mt-2 py-2 border-2 border-dashed border-gray-600 rounded text-sm"
+              >
+                + Satz hinzufügen
+              </button>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    if (!confirm(`Übung "${ex.name}" löschen?`)) return;
+                    updateEditingSession(s => {
+                      const clone = { ...s };
+                      clone.exercises = clone.exercises.filter((_, i) => i !== exIdx);
+                      return clone;
+                    });
+                  }}
+                  className="mt-2 px-3 py-2 rounded bg-red-700 hover:bg-red-800 text-sm"
+                >
+                  Übung löschen
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Aktionen */}
+        <div className="flex gap-3">
+          <button
+            onClick={() => handleSaveEdit(editingSession)}
+            className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold"
+          >
+            ✓ Änderungen speichern
+          </button>
+          <button
+            onClick={handleCancelEdit}
+            className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold"
+          >
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 📜 Normale Historien-Ansicht
   if (sessions.length === 0) {
     return (
       <div className={`${cardClass} border rounded-lg p-8 text-center`}>
         <p className="text-xl">Noch keine Trainings vorhanden</p>
-        <p className="text-gray-500 mt-2">Starte dein erstes Training mit dem "+ Neues Training" Button</p>
+        <p className="text-gray-500 mt-2">Starte dein erstes Training mit dem „+ Neues Training“ Button</p>
       </div>
     );
   }
@@ -1850,109 +2218,86 @@ function HistoryView({
   return (
     <div className="space-y-4">
       <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
-  <h2 className="text-2xl font-bold">Trainingshistorie</h2>
-  <input
-    type="text"
-    value={searchTerm}
-    onChange={(e) => setSearchTerm(e.target.value)}
-    placeholder="Suche nach Datum oder Übung..."
-    className={`w-full sm:w-64 px-4 py-2 rounded-lg border ${inputClass}`}
-  />
-</div>
+        <h2 className="text-2xl font-bold">Trainingshistorie</h2>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Suche nach Datum oder Übung..."
+          className={`w-full sm:w-64 px-4 py-2 rounded-lg border ${inputClass}`}
+        />
+      </div>
+
       {filteredSessions.map(session => (
         <div key={session.id} className={`${cardClass} border rounded-lg p-4`}>
-          <div className="flex items-center justify-between">
-            <div
-              className="flex-1 cursor-pointer"
-              onClick={() => setExpandedId(expandedId === session.id ? null : session.id)}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-lg">{formatDate(session.date)}</p>
-                  {session.type === 'murph' ? (
-                    <p className="text-sm text-gray-500">
-                      {session.location && `📍 ${session.location} · `}
-                      {session.murphData?.isLite ? '⚡ Lite' : '💪 Full'} · 
-                      {session.murphData?.rounds || 0}{session.murphData?.isLite ? ' Runden' : '/20 Runden'} · 
-                      Zeit: {formatTime(session.murphData?.totalTime || 0)}
-                      {session.murphData?.weightVest && ` · 🎒 ${session.murphData.weightVestKg || 0} kg`}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-gray-500">
-                      {session.location && `📍 ${session.location} · `}
-                      Volumen: {session.totals?.volumeKg?.toFixed(0) || 0} kg · {session.totals?.setCount || 0} Sätze
-                    </p>
-                  )}
-                </div>
-                {expandedId === session.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-              </div>
-            </div>
-            
-            <div className="ml-4 flex items-center gap-2">
-              {deleteConfirm === session.id ? (
-                <>
-                  <button
-                    onClick={() => handleDelete(session.id)}
-                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
-                  >
-                    Bestätigen
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirm(null)}
-                    className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
-                  >
-                    Abbrechen
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => setDeleteConfirm(session.id)}
-                  className="p-2 hover:bg-red-900 hover:bg-opacity-30 rounded transition-colors"
-                  title="Training löschen"
-                >
-                  <Trash2 size={18} className="text-red-500" />
-                </button>
-              )}
-            </div>
-          </div>
+          <div className="flex justify-between items-start">
+  {/* Linker Bereich: Titel/Meta klickbar */}
+  <div
+    className="flex-1 cursor-pointer"
+    onClick={() => setExpandedId(expandedId === session.id ? null : session.id)}
+  >
+    <div>
+      <p className="font-bold text-lg">{formatDate(session.date)}</p>
+      {session.type === 'murph'
+        ? <p className="text-sm text-gray-400">Murph • Runden: {session.murphData?.rounds ?? 0} • Zeit: {formatTime(session.murphData?.totalTime ?? 0)}</p>
+        : session.type === 'run'
+          ? <p className="text-sm text-gray-400">Laufen • {session.runData?.distance ?? 0} km in {formatTime(session.runData?.duration ?? 0)}</p>
+          : <p className="text-sm text-gray-400">
+              {session.exercises.length} Übungen • Volumen: {(session.totals?.volumeKg ?? calcVolume(session)).toFixed(0)} kg
+            </p>}
+    </div>
+  </div>
 
-          {expandedId === session.id && session.type === 'run' && (
-            <div className="mt-4">
-              <div className={`p-4 rounded ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div>
-                    <p className="text-sm text-gray-400">Distanz</p>
-                    <p className="text-2xl font-bold">{session.runData?.distance || 0} km</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400">Zeit</p>
-                    <p className="text-2xl font-bold">{formatTime(session.runData?.duration || 0)}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-gray-400">Pace</p>
-                    <p className="text-2xl font-bold text-blue-500">
-                      {session.runData?.distance && session.runData?.duration 
-                        ? `${Math.floor((session.runData.duration / session.runData.distance) / 60)}:${Math.floor((session.runData.duration / session.runData.distance) % 60).toString().padStart(2, '0')} min/km`
-                        : '—'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+  {/* Rechter Bereich: Icons oben bündig */}
+  <div className="flex gap-3 self-start">
+    <button
+      onClick={() => handleEdit(session)}
+      className="p-1 rounded-full text-gray-400 hover:text-yellow-500"
+      title="Training bearbeiten"
+      aria-label="Bearbeiten"
+    >
+      ✏️
+    </button>
 
-          {expandedId === session.id && session.type !== 'murph' && session.type !== 'run' && (
-            <div className="mt-4 space-y-3">
+    {deleteConfirm === session.id ? (
+      <>
+        <button
+          onClick={() => handleDelete(session.id)}
+          className="px-2 py-1 rounded text-red-600 hover:text-red-800 text-xs"
+        >
+          Löschen bestätigen
+        </button>
+        <button
+          onClick={() => setDeleteConfirm(null)}
+          className="px-2 py-1 rounded text-gray-500 hover:text-gray-700 text-xs"
+        >
+          Abbrechen
+        </button>
+      </>
+    ) : (
+      <button
+        onClick={() => setDeleteConfirm(session.id)}
+        className="p-1 rounded-full text-gray-400 hover:text-red-500"
+        title="Training löschen"
+        aria-label="Löschen"
+      >
+        🗑️
+      </button>
+    )}
+  </div>
+</div>
+
+
+          {expandedId === session.id && session.type !== 'run' && session.type !== 'murph' && (
+            <div className="mt-3">
               {session.exercises.map(ex => (
-                <div key={ex.id} className={`p-3 rounded ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <p className="font-semibold">
-                    {ex.name} {ex.variation && `(${ex.variation})`}
-                  </p>
-                  <div className="mt-2 space-y-1">
-                    {ex.sets.map((set, i) => (
-                      <p key={set.id} className="text-sm text-gray-400">
-                        Satz {i + 1}: {formatWeight(set.weightKg)} kg × {set.reps || '—'} Wdh
-                      </p>
+                <div key={ex.id} className="border rounded-lg p-3 mb-2">
+                  <div className="font-semibold">{ex.name}{ex.variation ? ` — ${ex.variation}` : ''}</div>
+                  <div className="text-sm text-gray-400">
+                    {ex.sets.map((s, i) => (
+                      <span key={s.id} className="mr-3">
+                        {i + 1}. {formatWeight(s.weightKg)} × {s.reps ?? '—'}
+                      </span>
                     ))}
                   </div>
                 </div>
