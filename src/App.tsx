@@ -405,14 +405,16 @@ useEffect(() => {
   <div className="max-w-4xl mx-auto px-4 py-4">
     {/* Dieser Teil bleibt IMMER sichtbar */}
     <div className="flex items-center justify-between mb-4 relative pb-4">
-<div>
+<div className="relative">
   <h1 
     className="text-2xl font-bold cursor-pointer transition-colors"
     onClick={() => setActiveTab('dashboard')}
   >
     Training Tracker
   </h1>
-  <p className="text-sm italic text-green-500 -mt-1">byHuwer</p>
+  <p className="absolute top-0 left-0 text-sm italic text-green-500 opacity-30 transform -rotate-12 pointer-events-none">
+    byHuwer
+  </p>
   {activeSession && (
     <p className="text-sm text-gray-500 mt-1">
       Volumen: {currentVolume.toFixed(0)} kg · {currentSetCount} Sätze
