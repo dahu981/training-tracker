@@ -402,46 +402,49 @@ useEffect(() => {
     <div className={`min-h-screen ${bgClass} transition-colors`}>
       {/* Header */}
 <header className={`sticky top-0 z-50 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} shadow-sm`}>
-  <div className="max-w-4xl mx-auto px-4 py-4">
+  <div className="max-w-4xl mx-auto px-4 py-2">
     {/* Dieser Teil bleibt IMMER sichtbar */}
-    <div className="flex items-center justify-between mb-4 relative pb-4">
-<div className="relative">
-  <h1 
-    className="text-2xl font-bold cursor-pointer transition-colors"
+ 
+<div className="flex items-center justify-between mb-4">
+  <img 
+    src="logo.png" 
+    alt="Training Tracker Logo"
+    className="h-20 sm:h-20 cursor-pointer transition-transform hover:scale-105"
     onClick={() => setActiveTab('dashboard')}
-  >
-    Training Tracker
-  </h1>
-  <p className="absolute top-3 right-0 text-xl font-bold italic text-green-500 transform -rotate-12 pointer-events-none">
-    byHuwer
-  </p>
-  {activeSession && (
-    <p className="text-sm text-gray-500 mt-1">
-      Volumen: {currentVolume.toFixed(0)} kg · {currentSetCount} Sätze
-    </p>
-  )}
+  />
+  <div className="flex items-center gap-3">
+    {activeSession && (
+      <div className="text-right">
+        <p className="text-sm font-bold text-white">
+          {currentVolume.toFixed(0)}kg
+        </p>
+        <p className="text-xs text-gray-400">
+          {currentSetCount} Sätze
+        </p>
+      </div>
+    )}
+    <button
+      onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+      className="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm"
+    >
+      {theme === 'dark' ? '☀️' : '🌙'}
+    </button>
+  </div>
 </div>
-      <button
-        onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
-        className="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm"
-      >
-        {theme === 'dark' ? '☀️' : '🌙'}
-      </button>
-      
-      {activeSession && (activeSession.type === 'push' || activeSession.type === 'pull' || activeSession.type === 'legs_core') && (
-        <div className="absolute left-0 right-0 bottom-2">
-          <div className="bg-gray-700 rounded-full h-2 overflow-hidden">
-            <div 
-              className="bg-green-500 h-full transition-all duration-300"
-              style={{ 
-                width: `${Math.min(100, (activeSession.exercises.reduce((sum, ex) => sum + ex.sets.filter(s => s.weightKg !== null && s.reps !== null).length, 0) / Math.max(1, activeSession.exercises.reduce((sum, ex) => sum + ex.sets.length, 0))) * 100)}%` 
-              }}
-            />
-          </div>
-        </div>
-      )}
+
+{/* Progressbar mit mehr Abstand nach oben */}
+{activeSession && (activeSession.type === 'push' || activeSession.type === 'pull' || activeSession.type === 'legs_core') && (
+  <div className="mt-3 mb-3">
+    <div className="bg-gray-700 rounded-full h-2 overflow-hidden">
+      <div 
+        className="bg-green-500 h-full transition-all duration-300"
+        style={{ 
+          width: `${Math.min(100, (activeSession.exercises.reduce((sum, ex) => sum + ex.sets.filter(s => s.weightKg !== null && s.reps !== null).length, 0) / Math.max(1, activeSession.exercises.reduce((sum, ex) => sum + ex.sets.length, 0))) * 100)}%` 
+        }}
+      />
     </div>
-    
+  </div>
+)}  
     {/* Dieser Teil verschwindet beim Scrollen */}
 {showHeader && (
 <div>
