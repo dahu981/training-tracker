@@ -412,7 +412,7 @@ useEffect(() => {
   >
     Training Tracker
   </h1>
-  <p className="absolute top-2 right-8 z-10 text-base italic text-green-500 opacity-60 transform -rotate-12 pointer-events-none">
+  <p className="absolute top-3 right-0 text-xl font-bold italic text-green-500 transform -rotate-12 pointer-events-none">
     byHuwer
   </p>
   {activeSession && (
