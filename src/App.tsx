@@ -187,6 +187,14 @@ export default function TrainingTracker() {
   const [showHeader, setShowHeader] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
+  // Verhindere Pull-to-Refresh
+  useEffect(() => {
+    document.body.style.overscrollBehavior = 'none';
+    return () => {
+      document.body.style.overscrollBehavior = 'auto';
+    };
+  }, []);
+  
   useEffect(() => {
     saveDB(db);
   }, [db]);
@@ -1013,97 +1021,107 @@ function RunView({
 
   return (
     <div className="space-y-4">
-      <div className={`${cardClass} border rounded-lg p-6`}>
-        <h2 className="text-3xl font-bold mb-6 text-center">🏃 Lauf-Training</h2>
+      <div className={`${cardClass} border rounded-lg p-4 sm:p-6`}>
+        <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-center">🏃 Lauf-Training</h2>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Datum</label>
-            <input
-              type="date"
-              value={customDate}
-              onChange={(e) => setCustomDate(e.target.value)}
-              className={`w-full px-3 py-2 rounded border ${inputClass}`}
-            />
+        <div className="space-y-3 sm:space-y-4">
+          {/* Datum & Zeit - Mobile: übereinander, Desktop: nebeneinander */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2">Datum</label>
+              <input
+                type="date"
+                value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+                className={`w-full px-2 sm:px-3 py-2 text-sm sm:text-base rounded border ${inputClass}`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2">Uhrzeit</label>
+              <input
+                type="time"
+                value={customTime}
+                onChange={(e) => setCustomTime(e.target.value)}
+                className={`w-full px-2 sm:px-3 py-2 text-sm sm:text-base rounded border ${inputClass}`}
+              />
+            </div>
           </div>
 
+          {/* Distanz - kompaktere Buttons auf Mobile */}
           <div>
-            <label className="block text-sm font-medium mb-2">Uhrzeit</label>
-            <input
-              type="time"
-              value={customTime}
-              onChange={(e) => setCustomTime(e.target.value)}
-              className={`w-full px-3 py-2 rounded border ${inputClass}`}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Distanz (km)</label>
-            <div className="flex items-center gap-2">
+            <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2">Distanz (km)</label>
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={() => setDistance(d => Math.max(0, (parseFloat(d.replace(',', '.')) || 0) - 0.5).toString())}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded text-lg sm:text-xl font-bold transition-colors touch-manipulation shrink-0"
               >
                 −
               </button>
               <input
                 type="text"
+                inputMode="decimal"
                 value={distance}
                 onChange={(e) => setDistance(e.target.value)}
                 placeholder="z.B. 5.0"
-                className={`flex-1 px-3 py-2 text-center rounded border ${inputClass}`}
+                className={`flex-1 px-2 sm:px-3 py-2 text-center text-sm sm:text-base rounded border ${inputClass}`}
               />
               <button
                 onClick={() => setDistance(d => ((parseFloat(d.replace(',', '.')) || 0) + 0.5).toString())}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-700 hover:bg-gray-600 rounded text-lg sm:text-xl font-bold transition-colors touch-manipulation shrink-0"
               >
                 +
               </button>
-              <span className="text-sm font-medium">km</span>
+              <span className="text-xs sm:text-sm font-medium shrink-0">km</span>
             </div>
           </div>
 
+          {/* Zeit - kompaktere Inputs auf Mobile */}
           <div>
-            <label className="block text-sm font-medium mb-2">Zeit</label>
-            <div className="flex items-center gap-2">
+            <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2">Zeit</label>
+            <div className="flex items-center justify-center gap-2">
               <input
                 type="text"
+                inputMode="numeric"
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(e.target.value.replace(/\D/g, ''))}
                 placeholder="Min"
-                className={`flex-1 px-3 py-2 text-center rounded border ${inputClass}`}
+                className={`w-16 sm:w-20 px-2 sm:px-3 py-2 text-center text-sm sm:text-base rounded border ${inputClass}`}
               />
-              <span className="text-xl font-bold">:</span>
+              <span className="text-lg sm:text-xl font-bold">:</span>
               <input
                 type="text"
+                inputMode="numeric"
                 value={durationSeconds}
                 onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, '');
                   if (parseInt(val) < 60 || val === '') setDurationSeconds(val);
                 }}
                 placeholder="Sek"
-                className={`flex-1 px-3 py-2 text-center rounded border ${inputClass}`}
+                className={`w-16 sm:w-20 px-2 sm:px-3 py-2 text-center text-sm sm:text-base rounded border ${inputClass}`}
               />
             </div>
           </div>
 
-          <div className={`${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4 text-center`}>
-            <div className="text-sm text-gray-400 mb-1">Pace</div>
-            <div className="text-2xl font-bold text-blue-500">{pace()}</div>
+          {/* Pace Anzeige */}
+          <div className={`${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-3 sm:p-4 text-center`}>
+            <div className="text-xs sm:text-sm text-gray-400 mb-1">Pace</div>
+            <div className="text-xl sm:text-2xl font-bold text-blue-500">{pace()}</div>
           </div>
         </div>
       </div>
 
-      <div className="flex gap-3">
+      {/* Buttons - auf Mobile volle Breite für beide */}
+      <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={handleSave}
-          className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition-colors"
+          className="w-full sm:flex-1 py-3 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white rounded-lg font-bold transition-colors touch-manipulation"
         >
           ✓ Lauf speichern
         </button>
         <button
           onClick={onCancel}
-          className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-colors"
+          className="w-full sm:w-auto sm:px-6 py-3 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-lg font-bold transition-colors touch-manipulation"
         >
           Abbrechen
         </button>
@@ -1111,7 +1129,6 @@ function RunView({
     </div>
   );
 }
-
 // ===== MURPH VIEW =====
 function MurphView({
   session,
