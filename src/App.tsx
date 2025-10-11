@@ -48,23 +48,45 @@ type TrainingSession = {
   };
 };
 
+type TrainingTemplate = {
+  id: string;
+  type: 'push' | 'pull' | 'legs_core';
+  name: string;
+  exercises: Array<{
+    name: string;
+    variation?: string;
+    order: number;
+  }>;
+  isDefault: boolean;
+};
+
 type DB = {
   version: number;
   sessions: TrainingSession[];
+  templates: TrainingTemplate[];
 };
 
+// ===== DATABASE UTILITY =====
 // ===== DATABASE UTILITY =====
 const DB_KEY = 'training_tracker_db';
 
 const initDB = (): DB => ({
   version: 1,
-  sessions: []
+  sessions: [],
+  templates: []  // ← NEU
 });
 
 const loadDB = (): DB => {
   try {
     const stored = localStorage.getItem(DB_KEY);
-    return stored ? JSON.parse(stored) : initDB();
+    const db = stored ? JSON.parse(stored) : initDB();
+    
+    // Migration: templates hinzufügen falls nicht vorhanden
+    if (!db.templates) {
+      db.templates = [];
+    }
+    
+    return db;
   } catch {
     return initDB();
   }
@@ -72,6 +94,68 @@ const loadDB = (): DB => {
 
 const saveDB = (db: DB): void => {
   localStorage.setItem(DB_KEY, JSON.stringify(db));
+};
+
+// ← NEU: Default Templates erstellen
+const createDefaultTemplates = (): TrainingTemplate[] => [
+  {
+    id: 'default_push',
+    type: 'push',
+    name: '⭐ Standard Push',
+    isDefault: true,
+    exercises: [
+      { name: 'Overhead Press', order: 0 },
+      { name: 'Bankdrücken', variation: 'Langhantel', order: 1 },
+      { name: 'Schrägbankdrücken', variation: 'Langhantel', order: 2 },
+      { name: 'Military Press', order: 3 },
+      { name: 'SZ-Frontheben', order: 4 },
+      { name: 'Dips', order: 5 },
+      { name: 'SZ-Trizepsdrücken', order: 6 }
+    ]
+  },
+  {
+    id: 'default_pull',
+    type: 'pull',
+    name: '⭐ Standard Pull',
+    isDefault: true,
+    exercises: [
+      { name: 'Klimmzüge', order: 0 },
+      { name: 'Schweres Rudern', order: 1 },
+      { name: 'Kreuzheben', order: 2 },
+      { name: 'Rudern hinten', order: 3 },
+      { name: 'Bizepscurls', variation: 'SZ-Stange', order: 4 },
+      { name: 'Shrugs / Nacken', order: 5 }
+    ]
+  },
+  {
+    id: 'default_legs',
+    type: 'legs_core',
+    name: '⭐ Standard Beine/Bauch',
+    isDefault: true,
+    exercises: [
+      { name: 'Beinpresse', order: 0 },
+      { name: 'Beinbeuger', order: 1 },
+      { name: 'Bauch (Schrägbank)', order: 2 },
+      { name: 'Waden stehend / sitzend', order: 3 },
+      { name: 'Bauch, quer', order: 4 },
+      { name: 'Ausfallschritte', order: 5 }
+    ]
+  }
+];
+
+// ← NEU: Template für Trainingstyp laden
+const getTemplateForType = (db: DB, type: 'push' | 'pull' | 'legs_core'): TrainingTemplate => {
+  // Suche nach Custom-Template (nicht-default)
+  const customTemplate = db.templates.find(t => t.type === type && !t.isDefault);
+  if (customTemplate) return customTemplate;
+  
+  // Suche nach Default-Template
+  const defaultTemplate = db.templates.find(t => t.type === type && t.isDefault);
+  if (defaultTemplate) return defaultTemplate;
+  
+  // Fallback: Erstelle Default
+  const defaults = createDefaultTemplates();
+  return defaults.find(t => t.type === type)!;
 };
 
 // ===== HELPERS =====
@@ -177,7 +261,8 @@ const VARIATIONS: Record<string, string[]> = {
 // ===== MAIN APP =====
 export default function TrainingTracker() {
   const [db, setDB] = useState<DB>(loadDB);
-  const [activeTab, setActiveTab] = useState<'dashboard' | TrainingType>('dashboard');
+ const [activeTab, setActiveTab] = useState<'dashboard' | TrainingType | 'templates'>('dashboard');  // ← 'templates' hinzufügen
+const [editingTemplateType, setEditingTemplateType] = useState<'push' | 'pull' | 'legs_core' | null>(null);  // ← NEU
   const [activeSession, setActiveSession] = useState<TrainingSession | null>(null);
   const [showHistory, setShowHistory] = useState(true);
   const [snackbar, setSnackbar] = useState<string | null>(null);
@@ -194,7 +279,7 @@ export default function TrainingTracker() {
       document.body.style.overscrollBehavior = 'auto';
     };
   }, []);
-  
+
   useEffect(() => {
     saveDB(db);
   }, [db]);
@@ -222,50 +307,44 @@ useEffect(() => {
   };
 
   const createNewSession = () => {
-    const template = activeTab === 'push' ? PUSH_TEMPLATE 
-                   : activeTab === 'pull' ? PULL_TEMPLATE 
-                   : activeTab === 'legs_core' ? LEGS_TEMPLATE 
-                   : [];
-    
-    if (activeTab === 'murph') {
-      const murphSession: TrainingSession = {
-        id: generateId(),
-        type: 'murph',
-        date: new Date().toISOString(),
-        completed: false,
-        startedAt: new Date().toISOString(),
-        exercises: [],
-        murphData: {
-          rounds: 0
-        }
-      };
-      setActiveSession(murphSession);
-      setShowHistory(false);
-      return;
-    }
+  if (activeTab === 'murph') {
+    const murphSession: TrainingSession = {
+      id: generateId(),
+      type: 'murph',
+      date: new Date().toISOString(),
+      completed: false,
+      startedAt: new Date().toISOString(),
+      exercises: [],
+      murphData: {
+        rounds: 0
+      }
+    };
+    setActiveSession(murphSession);
+    setShowHistory(false);
+    return;
+  }
 
-    if (activeTab === 'run') {
-      const runSession: TrainingSession = {
-        id: generateId(),
-        type: 'run',
-        date: new Date().toISOString(),
-        completed: false,
-        startedAt: new Date().toISOString(),
-        exercises: [],
-        runData: {
-          distance: 0,
-          duration: 0
-        }
-      };
-      setActiveSession(runSession);
-      setShowHistory(false);
-      return;
-    }
-    
-    if (template.length === 0) {
-      showSnackbar('Dieser Trainingstyp ist noch nicht implementiert');
-      return;
-    }
+  if (activeTab === 'run') {
+    const runSession: TrainingSession = {
+      id: generateId(),
+      type: 'run',
+      date: new Date().toISOString(),
+      completed: false,
+      startedAt: new Date().toISOString(),
+      exercises: [],
+      runData: {
+        distance: 0,
+        duration: 0
+      }
+    };
+    setActiveSession(runSession);
+    setShowHistory(false);
+    return;
+  }
+  
+  // ← Template-basiert für Push/Pull/Legs
+  if (activeTab === 'push' || activeTab === 'pull' || activeTab === 'legs_core') {
+    const template = getTemplateForType(db, activeTab);
     
     const newSession: TrainingSession = {
       id: generateId(),
@@ -273,15 +352,21 @@ useEffect(() => {
       date: new Date().toISOString(),
       completed: false,
       startedAt: new Date().toISOString(),
-      exercises: template.map(ex => ({
-        ...ex,
+      exercises: template.exercises.map(ex => ({
         id: generateId(),
-        sets: getDefaultSetsForExercise(ex.name)
+        name: ex.name,
+        variation: ex.variation,
+        sets: getDefaultSetsForExercise(ex.name),
+        order: ex.order
       }))
     };
     setActiveSession(newSession);
     setShowHistory(false);
-  };
+    return;
+  }
+  
+  showSnackbar('Dieser Trainingstyp ist noch nicht implementiert');
+};
 
   const saveActiveSession = () => {
     if (!activeSession) return;
@@ -567,8 +652,23 @@ useEffect(() => {
     theme={theme} 
     onExport={exportBackup}
     onImport={importBackup}
+        setActiveTab={setActiveTab}                      // ← NEU
+    setEditingTemplateType={setEditingTemplateType}
   />
 )}
+  {activeTab === 'templates' && editingTemplateType && (
+    <TemplateEditor
+      db={db}
+      setDB={setDB}
+      type={editingTemplateType}
+      onBack={() => {
+        setActiveTab('dashboard');
+        setEditingTemplateType(null);
+      }}
+      showSnackbar={showSnackbar}
+      theme={theme}
+    />
+  )}
 
         {activeTab !== 'dashboard' && activeTab !== 'push' && activeTab !== 'pull' && activeTab !== 'legs_core' && activeTab !== 'murph' && activeTab !== 'run' && (
           <div className={`${cardClass} border rounded-lg p-8 text-center`}>
@@ -696,13 +796,212 @@ useEffect(() => {
   );
 }
 
+// ===== TEMPLATE EDITOR =====
+function TemplateEditor({
+  db,
+  setDB,
+  type,
+  onBack,
+  showSnackbar,
+  theme
+}: {
+  db: DB;
+  setDB: (updater: (prev: DB) => DB) => void;
+  type: 'push' | 'pull' | 'legs_core';
+  onBack: () => void;
+  showSnackbar: (msg: string) => void;
+  theme: 'light' | 'dark';
+}) {
+  const cardClass = theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
+  const inputClass = theme === 'dark' ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900';
+  
+  const currentTemplate = getTemplateForType(db, type);
+  const [editedTemplate, setEditedTemplate] = useState<TrainingTemplate>(
+    JSON.parse(JSON.stringify(currentTemplate))
+  );
+  const [showAddExercise, setShowAddExercise] = useState(false);
+
+  const typeLabel = type === 'push' ? 'Push' : type === 'pull' ? 'Pull' : 'Beine/Bauch';
+
+  const addExercise = (name: string, variation?: string) => {
+    const newExercise = {
+      name,
+      variation,
+      order: editedTemplate.exercises.length
+    };
+    setEditedTemplate(prev => ({
+      ...prev,
+      exercises: [...prev.exercises, newExercise]
+    }));
+    setShowAddExercise(false);
+  };
+
+  const removeExercise = (index: number) => {
+    setEditedTemplate(prev => ({
+      ...prev,
+      exercises: prev.exercises.filter((_, i) => i !== index)
+    }));
+  };
+
+  const moveExercise = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= editedTemplate.exercises.length) return;
+
+    const newExercises = [...editedTemplate.exercises];
+    [newExercises[index], newExercises[newIndex]] = [newExercises[newIndex], newExercises[index]];
+    
+    // Order neu setzen
+    newExercises.forEach((ex, i) => ex.order = i);
+    
+    setEditedTemplate(prev => ({
+      ...prev,
+      exercises: newExercises
+    }));
+  };
+
+  const saveTemplate = () => {
+    if (editedTemplate.exercises.length === 0) {
+      showSnackbar('Vorlage muss mindestens 1 Übung enthalten');
+      return;
+    }
+
+    setDB(prev => {
+      const newTemplates = prev.templates.filter(t => !(t.type === type && !t.isDefault));
+      
+      // Nur speichern wenn es sich vom Default unterscheidet
+      const defaultTemplate = createDefaultTemplates().find(t => t.type === type)!;
+      const isDifferent = JSON.stringify(editedTemplate.exercises) !== JSON.stringify(defaultTemplate.exercises);
+      
+      if (isDifferent) {
+        newTemplates.push({
+          ...editedTemplate,
+          id: `custom_${type}_${Date.now()}`,
+          isDefault: false
+        });
+      }
+
+      return {
+        ...prev,
+        templates: newTemplates
+      };
+    });
+
+    showSnackbar('Vorlage gespeichert!');
+    onBack();
+  };
+
+  const resetToDefault = () => {
+    if (!confirm('Wirklich auf Standard zurücksetzen?')) return;
+    
+    const defaultTemplate = createDefaultTemplates().find(t => t.type === type)!;
+    setEditedTemplate(JSON.parse(JSON.stringify(defaultTemplate)));
+    showSnackbar('Auf Standard zurückgesetzt');
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className={`${cardClass} border rounded-lg p-4 sm:p-6`}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl sm:text-2xl font-bold">✏️ {typeLabel} Vorlage</h2>
+          <button
+            onClick={resetToDefault}
+            className="text-xs sm:text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+          >
+            🔄 Standard
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {editedTemplate.exercises.map((ex, index) => (
+            <div key={index} className={`flex items-center gap-2 p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'}`}>
+              <div className="flex flex-col gap-1">
+                <button
+                  onClick={() => moveExercise(index, 'up')}
+                  disabled={index === 0}
+                  className="p-1 hover:bg-gray-600 rounded disabled:opacity-30 disabled:cursor-not-allowed touch-manipulation"
+                >
+                  <ChevronUp size={16} />
+                </button>
+                <button
+                  onClick={() => moveExercise(index, 'down')}
+                  disabled={index === editedTemplate.exercises.length - 1}
+                  className="p-1 hover:bg-gray-600 rounded disabled:opacity-30 disabled:cursor-not-allowed touch-manipulation"
+                >
+                  <ChevronDown size={16} />
+                </button>
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{ex.name}</p>
+                {ex.variation && (
+                  <p className="text-sm text-gray-400 truncate">{ex.variation}</p>
+                )}
+              </div>
+
+              <button
+                onClick={() => removeExercise(index)}
+                className="p-2 hover:bg-red-900 hover:bg-opacity-30 rounded transition-colors shrink-0 touch-manipulation"
+              >
+                <Trash2 size={18} className="text-red-500" />
+              </button>
+            </div>
+          ))}
+
+          {editedTemplate.exercises.length === 0 && (
+            <p className="text-center text-gray-500 py-8">Noch keine Übungen</p>
+          )}
+        </div>
+
+        <button
+          onClick={() => setShowAddExercise(true)}
+          className="w-full mt-4 py-3 border-2 border-dashed border-blue-600 hover:border-blue-500 rounded-lg text-blue-500 hover:text-blue-400 font-medium transition-colors"
+        >
+          + Übung hinzufügen
+        </button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <button
+          onClick={saveTemplate}
+          className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition-colors"
+        >
+          ✓ Vorlage speichern
+        </button>
+        <button
+          onClick={onBack}
+          className="sm:px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-bold transition-colors"
+        >
+          Abbrechen
+        </button>
+      </div>
+
+      {showAddExercise && (
+        <AddExerciseDialog
+          onAdd={addExercise}
+          onClose={() => setShowAddExercise(false)}
+          theme={theme}
+        />
+      )}
+    </div>
+  );
+}
 // ===== DASHBOARD VIEW =====
-function DashboardView({ db, theme, onExport, onImport }: { 
+function DashboardView({ 
+  db, 
+  theme, 
+  onExport, 
+  onImport,
+  setActiveTab,
+  setEditingTemplateType
+}: { 
   db: DB; 
   theme: 'light' | 'dark';
   onExport: () => void;
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setActiveTab: (tab: 'dashboard' | TrainingType | 'templates') => void;
+  setEditingTemplateType: (type: 'push' | 'pull' | 'legs_core' | null) => void;
 }) {
+
   const cardClass = theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200';
   
   const completedSessions = db.sessions.filter(s => s.completed);
@@ -900,6 +1199,35 @@ return (
       </div>
     )}
     
+    {/* ← NEU: Trainingsvorlagen */}
+<div className={`${cardClass} border rounded-lg p-6`}>
+  <h3 className="text-xl font-bold mb-4">📋 Trainingsvorlagen</h3>
+  <div className="space-y-3">
+    {(['push', 'pull', 'legs_core'] as const).map(type => {
+      const template = getTemplateForType(db, type);
+      const typeLabel = type === 'push' ? 'Push' : type === 'pull' ? 'Pull' : 'Beine/Bauch';
+      
+      return (
+        <div key={type} className="flex items-center justify-between">
+          <div>
+            <p className="font-medium">{typeLabel}</p>
+            <p className="text-sm text-gray-400">{template.name}</p>
+            <p className="text-xs text-gray-500">{template.exercises.length} Übungen</p>
+          </div>
+          <button
+            onClick={() => {
+              setActiveTab('templates');
+              setEditingTemplateType(type);
+            }}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors"
+          >
+            ✏️ Bearbeiten
+          </button>
+        </div>
+      );
+    })}
+  </div>
+</div>
     {/* Datenverwaltung */}
     <div className={`${cardClass} border rounded-lg p-6`}>
       <h3 className="text-xl font-bold mb-4">Datenverwaltung</h3>
